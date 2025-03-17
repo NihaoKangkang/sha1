@@ -14,6 +14,17 @@ def count_blocks(length_of_messages):
 
 # 输入字符串
 message = 'abc'
+emessage = message.encode()
+print(emessage)
+padding = bytearray(emessage)
+
+padding.append(0b1)
+
+print(type(padding))
+print(padding)
+print(type(bytes(padding).decode()))
+print(bytes(padding).decode())
+
 
 # 转化为16进制
 hexMessage = hex_encode(message)
