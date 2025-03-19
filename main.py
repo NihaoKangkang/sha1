@@ -9,11 +9,33 @@ def count_blocks(length_of_messages):
     print('余数: ', remainder)
     return (blocks + 1) if remainder < 448 else (blocks + 2)
 
+def f(times, x, y, z):
+    match times:
+        case s if 0 <= s <= 19:
+            return (x & y) ^ (~x & z)
+        case s if 20 <= s <= 39 or 60 <= s <= 79:
+            return x ^ y ^ z
+        case s if 40 <= s <= 59:
+            return (x & y) ^ (x & z) ^ (y & z)
+
+def K(times):
+    match times:
+        case s if 0<=s<=19:
+            return 0x5a827999
+        case s if 20 <= s <= 39:
+            return 0x6ed9eba1
+        case s if 40 <= s <= 59:
+            return 0x8f1bbcdc
+        case s if 60 <= s <= 79:
+            return 0xca62c1d6
+
 H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
 
 # 输入字符串
 # inputMessage = 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz123'
-inputMessage = 'abc'
+# inputMessage = 'abc'
+# inputMessage = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+inputMessage = 'a' * 1000000
 # padding = bytearray(emessage)
 
 # padding.append(0b10000000)
@@ -47,22 +69,42 @@ byteMessage += b'\x00' * (zeroBits // 8)
 # 补长度 需要把长度变为16进制
 # 输出长度为8bytes，大端在前的64bits消息长度
 byteMessage += lengthOfMessages.to_bytes(8, byteorder='big')
+# print('byteMessage: ', byteMessage)
+for block in range(0, blockNumber):
+    W = []
+    for t in range(0, 80):
+        if t < 16:
+            W.append(int.from_bytes(byteMessage[(block * 64 + t * 4): ((block * 64) + (t + 1) * 4)]))
+            # print(f"W[{t}] = {hex(W[t])}")
+        else:
+            W_temp = W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16]
+            W.append((W_temp << 1 | W_temp >> 31) & 0xffffffff)
+    # for i in range(0, 80):
+    #     print(hex(W[i]) ,end=' ')
+    #     if (i + 1) % 4 == 0:
+    #         print()
+    # print()
+    a = H[0]
+    b = H[1]
+    c = H[2]
+    d = H[3]
+    e = H[4]
+    # 每块进行80轮计算
+    for t in range(0,80):
+        T = (((a << 5)|(a >> 27)) + f(t, b, c, d) + e + K(t) + W[t]) & 0xffffffff
+        e = d
+        d = c
+        c = (b << 30 | b >> 2) & 0xffffffff
+        b = a
+        a = T
+        # print('t=', t, ': ', f"{a:08x}", '\t\t', f"{b:08x}", '\t\t', f"{c:08x}", '\t\t', f"{d:08x}", '\t\t', f"{e:08x}")
+    H[0] = (a + H[0]) & 0xffffffff
+    H[1] = (b + H[1]) & 0xffffffff
+    H[2] = (c + H[2]) & 0xffffffff
+    H[3] = (d + H[3]) & 0xffffffff
+    H[4] = (e + H[4]) & 0xffffffff
 
-W = []
-for t in range(0, 79):
-    if t < 16:
-        W.append(int.from_bytes(byteMessage[ t * 4 : ( t + 1 ) * 4 ]))
-    else:
-        W.append(W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16] << 1)
+SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
 
-# print W
-# for i in range(0, 79):
-#     print(hex(W[i]) ,end=' ')
-#     if (i + 1) % 4 == 0:
-#         print()
-# print()
-for t in range(0, blockNumber):
-    a = H[0], b = H[1], c = H[2], d = H[3], e = H[4]
-    H[0] = a + H[0] >> 32 
-print(byteMessage)
+print(SHA1)
 
