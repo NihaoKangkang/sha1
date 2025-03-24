@@ -6,28 +6,44 @@ def count_blocks(length_of_messages):
     # 长度除以512 计算分块数 左移计算速度更快
     blocks = (length_of_messages >> 9)
     remainder = (length_of_messages - (blocks << 9))
-    print('余数: ', remainder)
+    # print('余数: ', remainder)
     return (blocks + 1) if remainder < 448 else (blocks + 2)
 
 def f(times, x, y, z):
-    match times:
-        case s if 0 <= s <= 19:
-            return (x & y) ^ (~x & z)
-        case s if 20 <= s <= 39 or 60 <= s <= 79:
-            return x ^ y ^ z
-        case s if 40 <= s <= 59:
-            return (x & y) ^ (x & z) ^ (y & z)
+    # python 3.10 替换
+    # match times:
+    #     case s if 0 <= s <= 19:
+    #         return (x & y) ^ (~x & z)
+    #     case s if 20 <= s <= 39 or 60 <= s <= 79:
+    #         return x ^ y ^ z
+    #     case s if 40 <= s <= 59:
+    #         return (x & y) ^ (x & z) ^ (y & z)
+    if times < 20:
+        return (x & y) ^ (~x & z)
+    elif times < 40:
+        return x ^ y ^ z
+    elif times < 60:
+        return (x & y) ^ (x & z) ^ (y & z)
+    else:
+        return x ^ y ^ z
 
-def K(times):
-    match times:
-        case s if 0<=s<=19:
-            return 0x5a827999
-        case s if 20 <= s <= 39:
-            return 0x6ed9eba1
-        case s if 40 <= s <= 59:
-            return 0x8f1bbcdc
-        case s if 60 <= s <= 79:
-            return 0xca62c1d6
+# python3.10才支持match...case，而且判断会影响速度，不如直接载入到内存
+# def K(times):
+#     match times:
+#         case s if 0<=s<=19:
+#             return 0x5a827999
+#         case s if 20 <= s <= 39:
+#             return 0x6ed9eba1
+#         case s if 40 <= s <= 59:
+#             return 0x8f1bbcdc
+#         case s if 60 <= s <= 79:
+#             return 0xca62c1d6
+
+K = []
+K += [0x5a827999] * 20
+K += [0x6ed9eba1] * 20
+K += [0x8f1bbcdc] * 20
+K += [0xca62c1d6] * 20
 
 H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
 
@@ -54,12 +70,12 @@ byteMessage = inputMessage.encode()
 lengthOfMessages = len(byteMessage) * 8
 # 448bits边界测试
 # lengthOfMessages = 56 * 8
-print('length of bits: ', lengthOfMessages)
+# print('length of bits: ', lengthOfMessages)
 
 # 分块
 blockNumber = count_blocks(lengthOfMessages)
 # blockNumber = count_blocks(1000)
-print('blocks: ', blockNumber)
+# print('blocks: ', blockNumber)
 
 # 补位，如果bit流需要修改这里
 # 首位补1 其余补0
@@ -91,7 +107,9 @@ for block in range(0, blockNumber):
     e = H[4]
     # 每块进行80轮计算
     for t in range(0,80):
-        T = (((a << 5)|(a >> 27)) + f(t, b, c, d) + e + K(t) + W[t]) & 0xffffffff
+        # python 3.10 替换
+        # T = (((a << 5)|(a >> 27)) + f(t, b, c, d) + e + K(t) + W[t]) & 0xffffffff
+        T = (((a << 5) | (a >> 27)) + f(t, b, c, d) + e + K[t] + W[t]) & 0xffffffff
         e = d
         d = c
         c = (b << 30 | b >> 2) & 0xffffffff
@@ -106,5 +124,5 @@ for block in range(0, blockNumber):
 
 SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
 
-print(SHA1)
+print('SHA-1: ', SHA1)
 
