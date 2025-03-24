@@ -7,14 +7,9 @@ from SHA import *
 # inputMessage = 'abc'
 # inputMessage = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
 # inputMessage = 'a' * 1000000
-inputMessage = str(123.123)
-file_path = './binfile.bin'
-isfile(file_path)
-# with open(file_path, 'rb') as f:
-#     binary_read = f.read(512)
-#
-#     print()
-print(isfile('123123'))
+# inputMessage = str(123.123)
+inputMessage = './binfile.bin'
+
 # padding = bytearray(emessage)
 
 # padding.append(0b10000000)

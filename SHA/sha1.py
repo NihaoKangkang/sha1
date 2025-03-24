@@ -47,22 +47,53 @@ def f(times, x, y, z):
 #         case s if 60 <= s <= 79:
 #             return 0xca62c1d6
 
-def sha1_file_sum():
-    pass
+def sha1_file_sum(file_path):
+    with open(file_path, 'rb') as read_file:
+        read_file.seek(0, 2)
+        lengthOfFile = read_file.tell() * 8
+        print('byte:', lengthOfFile)
+        blockNumber = count_blocks(lengthOfFile)
+        # 最后一次80轮加入这条信息 addMessage
+        addMessage = b'\x80'
+        zeroBits = (blockNumber * 512 - 64 - 8 - lengthOfFile)
+        addMessage += b'\x00' * (zeroBits // 8)
+        addMessage += lengthOfFile.to_bytes(8, byteorder='big')
+        read_file.seek(0, 0)
+        for block in range(0, blockNumber):
+            blockMessage = read_file.read(64)
+            if len(blockMessage) < 64:
+                blockMessage
+                pass
+            W = []
+            for t in range(0, 80):
+                if t < 16:
+                    W.append(int.from_bytes(blockMessage[(block * 64 + t * 4): ((block * 64) + (t + 1) * 4)]))
+                else:
+                    W_temp = W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16]
+                    W.append((W_temp << 1 | W_temp >> 31) & 0xffffffff)
+            a = H[0]
+            b = H[1]
+            c = H[2]
+            d = H[3]
+            e = H[4]
+            # 每块进行80轮计算
+            for t in range(0, 80):
+                T = (((a << 5) | (a >> 27)) + f(t, b, c, d) + e + K[t] + W[t]) & 0xffffffff
+                e = d
+                d = c
+                c = (b << 30 | b >> 2) & 0xffffffff
+                b = a
+                a = T
+            H[0] = (a + H[0]) & 0xffffffff
+            H[1] = (b + H[1]) & 0xffffffff
+            H[2] = (c + H[2]) & 0xffffffff
+            H[3] = (d + H[3]) & 0xffffffff
+            H[4] = (e + H[4]) & 0xffffffff
 
 
-def sha1_str_sum():
-    pass
 
-
-def sha1_result(sha1string):
-    # 将文件和非文件转换为bytes类型
-    if isfile(sha1string):
-        with open(sha1string, 'rb') as f:
-            file = f.read()
-    else:
-        sha1string = str(sha1string)
-    byteMessage = sha1string.encode()
+def sha1_str_sum(string):
+    byteMessage = string.encode()
     lengthOfMessages = len(byteMessage) * 8
     # 文本分块
     blockNumber = count_blocks(lengthOfMessages)
@@ -71,7 +102,6 @@ def sha1_result(sha1string):
     zeroBits = (blockNumber * 512 - 64 - 8 - lengthOfMessages)
     byteMessage += b'\x00' * (zeroBits // 8)
     byteMessage += lengthOfMessages.to_bytes(8, byteorder='big')
-
     for block in range(0, blockNumber):
         W = []
         for t in range(0, 80):
@@ -101,3 +131,11 @@ def sha1_result(sha1string):
 
     SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
     return SHA1
+
+
+def sha1_result(sha1string):
+    # 将文件和非文件转换为bytes类型
+    if isfile(sha1string):
+        return sha1_file_sum(sha1string)
+    else:
+        return sha1_str_sum(str(sha1string))

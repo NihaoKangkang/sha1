@@ -1,5 +1,2 @@
-a = 123.123
-b = bytearray(str(a).encode())
-b.append(0b1011)
-print(len(b))
-print(b)
+for i in range(0, 1):
+    print('test')
