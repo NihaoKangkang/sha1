@@ -8,11 +8,13 @@
 
 ## Goal
 
+
 easy to sum SHA1 string and file.
 
 ---
 
 ## Usage
+
 
 `python ./main.py`
 
@@ -20,11 +22,13 @@ easy to sum SHA1 string and file.
 
 ## Result
 
+
 ![result picture](./result.png)
 
 ---
 
 ### License 
+
 
 This project is licensed under the [MIT license](https://github.com/danielmiessler/SecLists/blob/master/LICENSE).
 
