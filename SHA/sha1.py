@@ -8,6 +8,7 @@ K += [0xca62c1d6] * 20
 
 H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
 
+
 # 对信息分块 eg:  length = 23 return 1
 #               length = 452 return 2
 def count_blocks(length_of_messages):
@@ -17,6 +18,8 @@ def count_blocks(length_of_messages):
     # print('余数: ', remainder)
     return (blocks + 1) if remainder < 448 else (blocks + 2)
 
+
+# sha1中f函数
 def f(times, x, y, z):
     # python 3.10 替换
     # match times:
@@ -35,6 +38,39 @@ def f(times, x, y, z):
     else:
         return x ^ y ^ z
 
+def H_recovery():
+    H[0], H[1], H[2], H[3], H[4] = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0
+
+# 输入: 512bit Message
+# 目的: 计算新H[0...4]
+def sha1_algorithm(blockMessage):
+    W = []
+    for t in range(0, 80):
+        if t < 16:
+            W.append(int.from_bytes(blockMessage[(t * 4): ((t + 1) * 4)]))
+        else:
+            W_temp = W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16]
+            W.append((W_temp << 1 | W_temp >> 31) & 0xffffffff)
+    a = H[0]
+    b = H[1]
+    c = H[2]
+    d = H[3]
+    e = H[4]
+    # 每块进行80轮计算
+    for t in range(0, 80):
+        T = (((a << 5) | (a >> 27)) + f(t, b, c, d) + e + K[t] + W[t]) & 0xffffffff
+        e = d
+        d = c
+        c = (b << 30 | b >> 2) & 0xffffffff
+        b = a
+        a = T
+    H[0] = (a + H[0]) & 0xffffffff
+    H[1] = (b + H[1]) & 0xffffffff
+    H[2] = (c + H[2]) & 0xffffffff
+    H[3] = (d + H[3]) & 0xffffffff
+    H[4] = (e + H[4]) & 0xffffffff
+
+
 # python3.10才支持match...case，而且判断会影响速度，不如直接载入到内存
 # def K(times):
 #     match times:
@@ -49,46 +85,51 @@ def f(times, x, y, z):
 
 def sha1_file_sum(file_path):
     with open(file_path, 'rb') as read_file:
+        # 将指针移到最后，计算文件大小
         read_file.seek(0, 2)
         lengthOfFile = read_file.tell() * 8
-        print('byte:', lengthOfFile)
+        # print('byte:', lengthOfFile // 8)
         blockNumber = count_blocks(lengthOfFile)
         # 最后一次80轮加入这条信息 addMessage
         addMessage = b'\x80'
         zeroBits = (blockNumber * 512 - 64 - 8 - lengthOfFile)
         addMessage += b'\x00' * (zeroBits // 8)
         addMessage += lengthOfFile.to_bytes(8, byteorder='big')
+        # 将指针移到开头 开始sha1
         read_file.seek(0, 0)
-        for block in range(0, blockNumber):
-            blockMessage = read_file.read(64)
-            if len(blockMessage) < 64:
-                blockMessage
-                pass
-            W = []
-            for t in range(0, 80):
-                if t < 16:
-                    W.append(int.from_bytes(blockMessage[(block * 64 + t * 4): ((block * 64) + (t + 1) * 4)]))
-                else:
-                    W_temp = W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16]
-                    W.append((W_temp << 1 | W_temp >> 31) & 0xffffffff)
-            a = H[0]
-            b = H[1]
-            c = H[2]
-            d = H[3]
-            e = H[4]
-            # 每块进行80轮计算
-            for t in range(0, 80):
-                T = (((a << 5) | (a >> 27)) + f(t, b, c, d) + e + K[t] + W[t]) & 0xffffffff
-                e = d
-                d = c
-                c = (b << 30 | b >> 2) & 0xffffffff
-                b = a
-                a = T
-            H[0] = (a + H[0]) & 0xffffffff
-            H[1] = (b + H[1]) & 0xffffffff
-            H[2] = (c + H[2]) & 0xffffffff
-            H[3] = (d + H[3]) & 0xffffffff
-            H[4] = (e + H[4]) & 0xffffffff
+        # 最后两轮需要额外确认
+        if blockNumber >= 2:
+            for block in range(0, blockNumber - 2):
+                blockMessage = read_file.read(64)
+                sha1_algorithm(blockMessage)
+
+            # zeroBits range from 0, 64-8 + 448 = 504
+            # 1Block zeroBits from 0 to 448-8 = 440
+            # 2Blocks zeroBits from 448 to 504
+            if zeroBits <= 440:
+                blockMessage = read_file.read(64)
+                sha1_algorithm(blockMessage)
+                blockMessage = read_file.read()
+                blockMessage += addMessage
+                sha1_algorithm(blockMessage)
+            else:
+                blockMessage = read_file.read()
+                blockMessage += addMessage
+                print('length of block Message', len(blockMessage))
+                sha1_algorithm(blockMessage[:64])
+                sha1_algorithm(blockMessage[64:])
+        # 只有一轮计算则直接addMessage进行计算
+        else:
+            blockMessage = read_file.read()
+            blockMessage += addMessage
+            print(blockMessage)
+            sha1_algorithm(blockMessage)
+
+    SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
+    return SHA1
+
+
+
 
 
 
@@ -103,37 +144,16 @@ def sha1_str_sum(string):
     byteMessage += b'\x00' * (zeroBits // 8)
     byteMessage += lengthOfMessages.to_bytes(8, byteorder='big')
     for block in range(0, blockNumber):
-        W = []
-        for t in range(0, 80):
-            if t < 16:
-                W.append(int.from_bytes(byteMessage[(block * 64 + t * 4): ((block * 64) + (t + 1) * 4)]))
-            else:
-                W_temp = W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16]
-                W.append((W_temp << 1 | W_temp >> 31) & 0xffffffff)
-        a = H[0]
-        b = H[1]
-        c = H[2]
-        d = H[3]
-        e = H[4]
-        # 每块进行80轮计算
-        for t in range(0, 80):
-            T = (((a << 5) | (a >> 27)) + f(t, b, c, d) + e + K[t] + W[t]) & 0xffffffff
-            e = d
-            d = c
-            c = (b << 30 | b >> 2) & 0xffffffff
-            b = a
-            a = T
-        H[0] = (a + H[0]) & 0xffffffff
-        H[1] = (b + H[1]) & 0xffffffff
-        H[2] = (c + H[2]) & 0xffffffff
-        H[3] = (d + H[3]) & 0xffffffff
-        H[4] = (e + H[4]) & 0xffffffff
-
+        byteBlock = byteMessage[(block * 64): ((block + 1) * 64)]
+        print(byteBlock)
+        sha1_algorithm(byteBlock)
     SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
     return SHA1
 
 
 def sha1_result(sha1string):
+    # 恢复默认算子H
+    H_recovery()
     # 将文件和非文件转换为bytes类型
     if isfile(sha1string):
         return sha1_file_sum(sha1string)

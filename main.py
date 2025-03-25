@@ -4,11 +4,12 @@ from SHA import *
 
 # 输入字符串
 # inputMessage = 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz123'
-# inputMessage = 'abc'
+# inputMessage = '123abc'
+# print('string SHA-1: ', sha1_result(inputMessage))
 # inputMessage = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
 # inputMessage = 'a' * 1000000
 # inputMessage = str(123.123)
-inputMessage = './binfile.bin'
+
 
 # padding = bytearray(emessage)
 
@@ -81,6 +82,23 @@ inputMessage = './binfile.bin'
 #     H[4] = (e + H[4]) & 0xffffffff
 #
 # SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
+#
+# inputMessage = './binfile.bin'
+#
+# print('binfile.bin SHA-1: ', sha1_result(inputMessage))
+#
+# inputMessage = './binfile2.bin'
+#
+# print('binfile2.bin SHA-1: ', sha1_result(inputMessage))
+#
+# inputMessage = './fips180-2.pdf'
+#
+# print('fips180-2.pdf SHA-1: ', sha1_result(inputMessage))
+#
+# inputMessage = './LICENSE'
+#
+# print('LICENSE SHA-1: ', sha1_result(inputMessage))
 
-print('SHA-1: ', sha1_result(inputMessage))
-
+def __main__():
+    while True:
+        print('SHA-1: ', sha1_algorithm(input('Input string or file location need to calculate SHA1(Ctrl+C to abort): ')))
