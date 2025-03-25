@@ -99,6 +99,9 @@ from SHA import *
 #
 # print('LICENSE SHA-1: ', sha1_result(inputMessage))
 
-def __main__():
-    while True:
-        print('SHA-1: ', sha1_algorithm(input('Input string or file location need to calculate SHA1(Ctrl+C to abort): ')))
+if __name__ == "__main__":
+    inputData = 'tempString'
+    while inputData:
+        inputData = input('Input string or file location need to calculate SHA1(press ENTER to abort): ')
+        if inputData != '':
+            print('SHA-1: ', sha1_result(inputData))

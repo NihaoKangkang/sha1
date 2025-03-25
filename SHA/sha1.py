@@ -145,7 +145,6 @@ def sha1_str_sum(string):
     byteMessage += lengthOfMessages.to_bytes(8, byteorder='big')
     for block in range(0, blockNumber):
         byteBlock = byteMessage[(block * 64): ((block + 1) * 64)]
-        print(byteBlock)
         sha1_algorithm(byteBlock)
     SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
     return SHA1
