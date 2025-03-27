@@ -38,8 +38,10 @@ def f(times, x, y, z):
     else:
         return x ^ y ^ z
 
+
 def H_recovery():
     H[0], H[1], H[2], H[3], H[4] = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0
+
 
 # 输入: 512bit Message
 # 目的: 计算新H[0...4]
@@ -99,38 +101,43 @@ def sha1_file_sum(file_path):
         read_file.seek(0, 0)
         # 最后两轮需要额外确认
         if blockNumber >= 2:
-            for block in range(0, blockNumber - 2):
-                blockMessage = read_file.read(64)
-                sha1_algorithm(blockMessage)
-
-            # zeroBits range from 0, 64-8 + 448 = 504
-            # 1Block zeroBits from 0 to 448-8 = 440
-            # 2Blocks zeroBits from 448 to 504
-            if zeroBits <= 440:
-                blockMessage = read_file.read(64)
-                sha1_algorithm(blockMessage)
-                blockMessage = read_file.read()
-                blockMessage += addMessage
-                sha1_algorithm(blockMessage)
-            else:
-                blockMessage = read_file.read()
-                blockMessage += addMessage
-                print('length of block Message', len(blockMessage))
-                sha1_algorithm(blockMessage[:64])
-                sha1_algorithm(blockMessage[64:])
+            # 用内存优化超大文件，换取计算速度
+            # 超过1GB的文件
+            fileGBSize = lengthOfFile // (8 * 1024 * 1024 * 1024)
+            # 占用1G内存，来执行算法
+            for GBlocks in range(0, fileGBSize):
+                GBMessage = read_file.read(1024 * 1024 * 1024)
+                # 每GB文件里包含64bytes block 数量为
+                for block in range(0, 16 * 1024 * 1024):
+                    sha1_algorithm(GBMessage[(block * 64): ((block + 1) * 64)])
+            GBMessage = read_file.read()
+            GBMessage += addMessage
+            for block in range(0, blockNumber - (fileGBSize * 1024 * 1024 * 1024 // 64)):
+                sha1_algorithm(GBMessage[(block * 64): ((block + 1) * 64)])
+            # for block in range(0, blockNumber - 2):
+            #     blockMessage = read_file.read(64)
+            #     sha1_algorithm(blockMessage)
+            # # zeroBits range from 0, 64-8 + 448 = 504
+            # # 1Block zeroBits from 0 to 448-8 = 440
+            # # 2Blocks zeroBits from 448 to 504
+            # if zeroBits <= 440:
+            #     blockMessage = read_file.read(64)
+            #     sha1_algorithm(blockMessage)
+            #     blockMessage = read_file.read()
+            #     blockMessage += addMessage
+            #     sha1_algorithm(blockMessage)
+            # else:
+            #     blockMessage = read_file.read()
+            #     blockMessage += addMessage
+            #     sha1_algorithm(blockMessage[:64])
+            #     sha1_algorithm(blockMessage[64:])
         # 只有一轮计算则直接addMessage进行计算
         else:
             blockMessage = read_file.read()
             blockMessage += addMessage
-            print(blockMessage)
             sha1_algorithm(blockMessage)
-
     SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
     return SHA1
-
-
-
-
 
 
 def sha1_str_sum(string):
@@ -150,11 +157,20 @@ def sha1_str_sum(string):
     return SHA1
 
 
+# 查看内存调用情况，整体占用内存<0.001MB
+# import tracemalloc
+
 def sha1_result(sha1string):
     # 恢复默认算子H
+    # tracemalloc.start()
     H_recovery()
     # 将文件和非文件转换为bytes类型
     if isfile(sha1string):
-        return sha1_file_sum(sha1string)
+        result = sha1_file_sum(sha1string)
     else:
-        return sha1_str_sum(str(sha1string))
+        result = sha1_str_sum(str(sha1string))
+    # current, peak = tracemalloc.get_traced_memory()
+    # print(f"Current memory usage: {current / 1024 ** 2} MB")
+    # print(f"Peak memory usage: {peak / 1024 ** 2} MB")
+    # tracemalloc.stop()
+    return result

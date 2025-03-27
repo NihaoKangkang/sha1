@@ -1,5 +1,3 @@
-from os.path import isfile
-
 from SHA import *
 
 # 输入字符串
