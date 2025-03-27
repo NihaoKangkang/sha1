@@ -140,6 +140,54 @@ def sha1_file_sum(file_path):
     return SHA1
 
 
+# 针对小内存文件进行优化
+# 1GB内存文件，占用内存<0.001MB
+def sha1_file_sum_small_memery(file_path):
+    with open(file_path, 'rb') as read_file:
+        # 将指针移到最后，计算文件大小
+        read_file.seek(0, 2)
+        lengthOfFile = read_file.tell() * 8
+        # print('byte:', lengthOfFile // 8)
+        blockNumber = count_blocks(lengthOfFile)
+        # 最后一次80轮加入这条信息 addMessage
+        addMessage = b'\x80'
+        zeroBits = (blockNumber * 512 - 64 - 8 - lengthOfFile)
+        addMessage += b'\x00' * (zeroBits // 8)
+        addMessage += lengthOfFile.to_bytes(8, byteorder='big')
+        # 将指针移到开头 开始sha1
+        read_file.seek(0, 0)
+        # 最后两轮需要额外确认
+        if blockNumber >= 2:
+            for block in range(0, blockNumber - 2):
+                blockMessage = read_file.read(64)
+                sha1_algorithm(blockMessage)
+
+            # zeroBits range from 0, 64-8 + 448 = 504
+            # 1Block zeroBits from 0 to 448-8 = 440
+            # 2Blocks zeroBits from 448 to 504
+            if zeroBits <= 440:
+                blockMessage = read_file.read(64)
+                sha1_algorithm(blockMessage)
+                blockMessage = read_file.read()
+                blockMessage += addMessage
+                sha1_algorithm(blockMessage)
+            else:
+                blockMessage = read_file.read()
+                blockMessage += addMessage
+                print('length of block Message', len(blockMessage))
+                sha1_algorithm(blockMessage[:64])
+                sha1_algorithm(blockMessage[64:])
+        # 只有一轮计算则直接addMessage进行计算
+        else:
+            blockMessage = read_file.read()
+            blockMessage += addMessage
+            print(blockMessage)
+            sha1_algorithm(blockMessage)
+
+    SHA1 = f"{H[0]:08x}{H[1]:08x}{H[2]:08x}{H[3]:08x}{H[4]:08x}"
+    return SHA1
+
+
 def sha1_str_sum(string):
     byteMessage = string.encode()
     lengthOfMessages = len(byteMessage) * 8
